@@ -1,21 +1,13 @@
-module Main exposing (..)
+module Main exposing (Cell, Grid, Model, Msg(..), countNeighbors, createNextGeneration, flatten2D, generate, generateBool, generateCell, generateCells, generateConstant, generateGrid, getCell, init, initGrid, liveOrDie, main, subscriptions, update, view, viewCell, viewGrid, viewRow)
 
--- Press buttons to increment and decrement a counter.
---
--- Read how it works:
---   https://guide.elm-lang.org/architecture/buttons.html
---
--- import Random.List exposing (list)
-
-import Array exposing (Array)
 import Browser
 import Html exposing (Html, button, div, input, text)
-import Html.Attributes exposing (class, style, value)
+import Html.Attributes exposing (class, value)
 import Html.Events exposing (onClick, onInput)
 import List exposing (foldr)
 import Random
-import Random.Extra exposing (bool, combine, sequence)
-import Set exposing (Set)
+import Random.Extra exposing (bool, combine)
+import Set
 import Time
 
 
@@ -188,10 +180,6 @@ viewRow grid colNum =
 
 viewCell : Cell -> Html Msg
 viewCell cell =
-    let
-        pos =
-            String.fromInt cell.x ++ "," ++ String.fromInt cell.y
-    in
     if cell.isAlive == True then
         div [ class "cell alive" ] []
 
