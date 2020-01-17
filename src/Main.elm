@@ -1,14 +1,16 @@
 module Main exposing (Cell, Grid, Model, Msg(..), countNeighbors, createNextGeneration, flatten2D, generate, generateBool, generateCell, generateCells, generateConstant, generateGrid, getCell, init, initGrid, liveOrDie, main, subscriptions, update, view, viewCell, viewGrid, viewRow)
 
-import Browser
+import Browser exposing (Document, UrlRequest(..))
+import Browser.Navigation exposing (Key)
 import Html exposing (Html, button, div, input, text)
 import Html.Attributes exposing (class, value)
 import Html.Events exposing (onClick, onInput)
 import List exposing (foldr)
-import Random
+import Random exposing (Generator)
 import Random.Extra exposing (bool, combine)
 import Set
 import Time
+import Url exposing (Url)
 
 
 flatten2D : List (List a) -> List a
@@ -22,23 +24,26 @@ flatten2D list =
 
 main : Program () Model Msg
 main =
-    Browser.element
+    Browser.application
         { init = init
+        , onUrlChange = UrlChange
+        , onUrlRequest = LinkClicked
+        , subscriptions = subscriptions
         , update = update
         , view = view
-        , subscriptions = subscriptions
         }
-
-
-
--- MODEL
 
 
 type alias Model =
     { grid : Maybe Grid
     , height : Int
     , width : Int
+    , page : Page
     }
+
+
+type Page
+    = Home
 
 
 type alias Cell =
@@ -52,11 +57,12 @@ type alias Grid =
     List Cell
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
+init : () -> Url -> Key -> ( Model, Cmd Msg )
+init flags url key =
     ( { grid = Nothing
       , height = 10
       , width = 10
+      , page = Home
       }
     , Cmd.none
     )
@@ -88,6 +94,8 @@ type Msg
     | Next
     | InputHeight String
     | InputWidth String
+    | LinkClicked UrlRequest
+    | UrlChange Url
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -139,20 +147,43 @@ update msg model =
                 Nothing ->
                     ( model, Cmd.none )
 
+        LinkClicked urlRequest ->
+            case urlRequest of
+                Internal url ->
+                    ( model
+                    , Cmd.none
+                    )
+
+                External url ->
+                    ( model
+                    , Browser.Navigation.load url
+                    )
+
+        UrlChange url ->
+            ( { model | page = Home }
+            , Cmd.none
+            )
+
 
 
 -- VIEW
 
 
-view : Model -> Html Msg
+view : Model -> Document Msg
 view model =
-    div []
-        [ input [ onInput InputHeight, value (String.fromInt model.height) ] []
-        , input [ onInput InputWidth, value (String.fromInt model.width) ] []
-        , button [ class "generate-btn", onClick GetGrid ] [ text "Generate" ]
-        , button [ class "generate-btn", onClick Next ] [ text "Next" ]
-        , viewGrid model.grid
-        ]
+    { title = "Example app"
+    , body =
+        case model.page of
+            Home ->
+                [ div []
+                    [ input [ onInput InputHeight, value (String.fromInt model.height) ] []
+                    , input [ onInput InputWidth, value (String.fromInt model.width) ] []
+                    , button [ class "generate-btn", onClick GetGrid ] [ text "Generate" ]
+                    , button [ class "generate-btn", onClick Next ] [ text "Next" ]
+                    , viewGrid model.grid
+                    ]
+                ]
+    }
 
 
 viewGrid : Maybe Grid -> Html Msg
@@ -197,27 +228,27 @@ generate h w =
     Random.generate GotGrid (generateGrid (initGrid h w))
 
 
-generateGrid : Grid -> Random.Generator Grid
+generateGrid : Grid -> Generator Grid
 generateGrid grid =
     combine (generateCells grid)
 
 
-generateCells : List Cell -> List (Random.Generator Cell)
+generateCells : List Cell -> List (Generator Cell)
 generateCells list =
     list |> List.map generateCell
 
 
-generateCell : Cell -> Random.Generator Cell
+generateCell : Cell -> Generator Cell
 generateCell cell =
     Random.map3 Cell (generateConstant cell.x) (generateConstant cell.y) bool
 
 
-generateBool : Random.Generator Bool
+generateBool : Generator Bool
 generateBool =
     bool
 
 
-generateConstant : Int -> Random.Generator Int
+generateConstant : Int -> Generator Int
 generateConstant a =
     Random.constant a
 
